@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aditya Singh | Developer & Builder</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Three.js Library for 3D Background Visuals -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        warmBg: '#F7F5F0',
+                        cardBg: 'rgba(255, 253, 249, 0.85)',
+                        charcoal: '#1A1A1A',
+                        mutedCharcoal: '#2D2D2D',
+                        softGray: '#666666',
+                        warmYellow: '#F5B041',
+                        accentYellow: '#E59866',
+                        lightYellow: '#FEF9E7',
+                        borderWarm: 'rgba(26, 26, 26, 0.12)',
+                    },
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    boxShadow: {
+                        'warm-card': '0 8px 30px rgba(0, 0, 0, 0.05)',
+                        'warm-hover': '0 15px 35px rgba(245, 176, 65, 0.15)',
+                        'accent-button': '0 4px 14px rgba(245, 176, 65, 0.4)',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        html, body {
+            width: 100%;
+            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            background-color: #F7F5F0;
+            color: #1A1A1A;
+            overflow-x: hidden;
+        }
+
+        /* 3D Canvas Background */
+        #canvas-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.65;
+        }
+
+        /* Custom glowing cursor follower */
+        #custom-cursor {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #F5B041;
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            transition: width 0.2s, height 0.2s, background-color 0.2s;
+            box-shadow: 0 0 10px rgba(245, 176, 65, 0.4);
+        }
+
+        #custom-cursor-dot {
+            width: 6px;
+            height: 6px;
+            background: #1A1A1A;
+            border-radius: 50%;
+            position: fixed;
+            pointer-events: none;
+            z-index: 10000;
+            transform: translate(-50%, -50%);
+        }
+
+        .warm-glass {
+            background: rgba(255, 253, 249, 0.82);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(26, 26, 26, 0.1);
+            position: relative;
+            transition: all 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .warm-glass:hover {
+            border-color: rgba(245, 176, 65, 0.6);
+            transform: translateY(-4px);
+            box-shadow: 0 14px 30px rgba(26, 26, 26, 0.08);
+        }
+
+        /* Interactive Story Reveal Effect */
+        .story-reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .story-reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .grid-pattern {
+            background-image: linear-gradient(to right, rgba(26, 26, 26, 0.03) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(26, 26, 26, 0.03) 1px, transparent 1px);
+            background-size: 32px 32px;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #F7F5F0;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #D5D0C5;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #F5B041;
+        }
+    </style>
+</head>
+<body class="font-sans antialiased relative w-full overflow-x-hidden selection:bg-warmYellow selection:text-charcoal">
+
+    <!-- 3D WebGL Canvas Container -->
+    <div id="canvas-container"></div>
+
+    <!-- Custom Cursor -->
+    <div id="custom-cursor" class="hidden md:block"></div>
+    <div id="custom-cursor-dot" class="hidden md:block"></div>
+
+    <!-- Background Grid Overlay -->
+    <div class="fixed inset-0 grid-pattern pointer-events-none z-0"></div>
+
+    <!-- Navigation Header -->
+    <nav class="fixed top-0 left-0 right-0 z-50 warm-glass border-b border-borderWarm bg-warmBg/90 backdrop-blur-md">
+        <div class="max-w-6xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
+            <a href="#hero" class="font-mono text-lg sm:text-xl font-bold tracking-tight text-charcoal flex items-center gap-2">
+                <span class="text-warmYellow">&bull;</span> Aditya Singh
+                <span class="text-xs text-softGray font-normal hidden sm:inline-block">| E&amp;C Student &amp; Builder</span>
+            </a>
+
+            <div class="hidden md:flex items-center gap-6 text-sm font-medium text-mutedCharcoal">
+                <a href="#about" class="hover:text-warmYellow transition-colors">About</a>
+                <a href="#projects" class="hover:text-warmYellow transition-colors">Projects</a>
+                <a href="#skills" class="hover:text-warmYellow transition-colors">Stack</a>
+                <a href="#education" class="hover:text-warmYellow transition-colors">Education</a>
+                <a href="#contact" class="hover:text-warmYellow transition-colors">Contact</a>
+            </div>
+
+            <a href="mailto:singhaditya140277@gmail.com" class="px-4 py-2 text-xs font-mono font-bold text-charcoal bg-warmYellow rounded-lg hover:bg-accentYellow shadow-accent-button transition-all">
+                GET IN TOUCH
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Container -->
+    <main class="relative z-10 pt-24 sm:pt-28 px-4 sm:px-6 max-w-5xl mx-auto space-y-16 sm:space-y-24 pb-20 w-full">
+
+        <!-- Hero Story Section -->
+        <section id="hero" class="min-h-[85vh] flex flex-col justify-center items-center text-center space-y-6 sm:space-y-8 story-reveal pt-4">
+            
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full warm-glass border-warmYellow/50 text-charcoal text-xs font-mono bg-lightYellow shadow-sm">
+                <span class="w-2.5 h-2.5 rounded-full bg-warmYellow animate-ping"></span>
+                <span>Electronics &amp; Computer Engineering · GJU Hisar</span>
+            </div>
+
+            <!-- Profile Image Container with SIH Achievement Badge Overlay -->
+            <div class="relative group my-2">
+                <div class="w-48 h-48 sm:w-64 sm:h-64 rounded-3xl p-1.5 bg-gradient-to-tr from-warmYellow via-accentYellow to-charcoal shadow-warm-hover transform hover:scale-[1.02] transition-all duration-300">
+                    <div class="w-full h-full bg-warmBg rounded-[20px] overflow-hidden relative border border-borderWarm">
+                        <img src="https://raw.githubusercontent.com/sankhduu/dih_project/main/1000006731.jpg" 
+                             onerror="this.onerror=null; this.src='https://placehold.co/500x500/F5B041/1A1A1A?text=Aditya+Singh';" 
+                             alt="Aditya Singh" 
+                             class="w-full h-full object-cover filter saturate-105 hover:scale-105 transition-transform duration-500">
+                    </div>
+                </div>
+
+                <!-- Floating Achievement Badge -->
+                <div class="absolute -bottom-3 -right-2 sm:-bottom-4 sm:-right-4 warm-glass px-3.5 py-2 rounded-xl border border-warmYellow/60 flex items-center gap-3 shadow-lg bg-warmBg/95">
+                    <i class="fa-solid fa-trophy text-warmYellow text-lg"></i>
+                    <div class="text-left">
+                        <div class="text-[9px] uppercase tracking-wider text-softGray font-mono font-bold">Achievement</div>
+                        <div class="text-xs font-extrabold text-charcoal">SIH Round 2 Qualifier</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="space-y-3 max-w-3xl mx-auto px-2">
+                <h1 class="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-charcoal leading-tight">
+                    Hey, I'm <span class="bg-gradient-to-r from-warmYellow via-accentYellow to-charcoal bg-clip-text text-transparent">Aditya Singh</span>
+                </h1>
+                <p class="text-lg sm:text-2xl font-bold text-mutedCharcoal leading-snug">
+                    Electronics &amp; Computer Engineering Student · Developer · Builder
+                </p>
+                <p class="text-softGray text-sm sm:text-base leading-relaxed max-w-2xl mx-auto">
+                    Passionate about taking ideas, figuring out how they work, and turning them into real products people can use. First-year student at Guru Jambheshwar University of Science and Technology, Hisar (2026–2030).
+                </p>
+            </div>
+
+            <!-- Quick Action Links & Handles -->
+            <div class="flex flex-wrap items-center justify-center gap-3 sm:gap-4 pt-2">
+                <a href="#projects" class="px-6 py-3 text-sm font-bold text-charcoal bg-warmYellow rounded-xl hover:bg-accentYellow shadow-accent-button transition-all flex items-center gap-2">
+                    <span>Explore My Work</span>
+                    <i class="fa-solid fa-arrow-down text-xs"></i>
+                </a>
+
+                <a href="mailto:singhaditya140277@gmail.com" class="px-5 py-3 text-sm font-medium warm-glass text-charcoal rounded-xl hover:border-warmYellow transition-all flex items-center gap-2">
+                    <i class="fa-solid fa-envelope text-warmYellow"></i>
+                    <span>Email Direct</span>
+                </a>
+
+                <a href="https://github.com/sankhduu/dih_project" target="_blank" rel="noopener noreferrer" class="px-5 py-3 text-sm font-medium warm-glass text-charcoal rounded-xl hover:border-warmYellow transition-all flex items-center gap-2">
+                    <i class="fa-brands fa-github"></i>
+                    <span>GitHub</span>
+                </a>
+
+                <a href="https://www.linkedin.com/in/me-hu-adityasingh" target="_blank" rel="noopener noreferrer" class="px-5 py-3 text-sm font-medium warm-glass text-charcoal rounded-xl hover:border-warmYellow transition-all flex items-center gap-2">
+                    <i class="fa-brands fa-linkedin"></i>
+                    <span>LinkedIn</span>
+                </a>
+            </div>
+
+            <!-- Profile Summary Ribbon -->
+            <div class="w-full pt-6 border-t border-borderWarm flex flex-wrap items-center justify-center sm:justify-between gap-4 text-xs font-mono text-softGray">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-location-dot text-warmYellow"></i>
+                    <span>Hisar, Haryana, India</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-graduation-cap text-warmYellow"></i>
+                    <span>Batch 2026 – 2030</span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-phone text-warmYellow"></i>
+                    <span>+91 70275 42547</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- About Story Intro -->
+        <section id="about" class="space-y-6 story-reveal">
+            <div class="border-l-4 border-warmYellow pl-4">
+                <h2 class="text-2xl sm:text-3xl font-bold text-charcoal">About Me</h2>
+                <p class="text-xs sm:text-sm font-mono text-softGray mt-1">// Philosophy &amp; Exploration</p>
+            </div>
+
+            <div class="warm-glass p-6 sm:p-8 rounded-2xl border-borderWarm space-y-4">
+                <p class="text-mutedCharcoal text-base sm:text-lg leading-relaxed">
+                    I enjoy taking an idea, figuring out how it could work, and turning it into something people can actually use. 
+                    I've worked on a digital legal-metrology verification platform, explored ways to simplify college life through software, and started developing ideas for more accessible political communication.
+                </p>
+                <p class="text-softGray text-sm sm:text-base leading-relaxed">
+                    I'm still learning, experimenting, and building. And that's the part I enjoy most.
+                </p>
+            </div>
+        </section>
+
+        <!-- Featured Projects Section -->
+        <section id="projects" class="space-y-8 story-reveal">
+            <div class="border-l-4 border-warmYellow pl-4">
+                <h2 class="text-2xl sm:text-3xl font-bold text-charcoal">Things I've Been Building</h2>
+                <p class="text-xs sm:text-sm font-mono text-softGray mt-1">// Featured Work &amp; Case Studies</p>
+            </div>
+
+            <!-- Main Hero Project: True Metric -->
+            <div class="warm-glass p-6 sm:p-8 rounded-2xl border-warmYellow/60 bg-lightYellow/40 space-y-6 relative overflow-hidden group">
+                <div class="flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <span class="px-3 py-1 rounded-full text-xs font-mono bg-warmYellow/30 border border-warmYellow text-charcoal font-bold">
+                            ★ FEATURED PROJECT · 01
+                        </span>
+                        <span class="px-3 py-1 rounded-full text-xs font-mono bg-emerald-100 border border-emerald-300 text-emerald-800 font-semibold">
+                            ● SIH 2026 Round 2 Selected
+                        </span>
+                    </div>
+                    <span class="text-xs font-mono text-softGray">PS 26036 · Dept. of Consumer Affairs</span>
+                </div>
+
+                <div class="space-y-2">
+                    <h3 class="text-2xl sm:text-3xl font-extrabold text-charcoal group-hover:text-accentYellow transition-colors">
+                        True Metric (e-Māpan 2.0)
+                    </h3>
+                    <p class="text-sm font-mono text-softGray">
+                        Role: Team Lead &amp; Technical Lead (Backend and Frontend) | Team Vector6 (6 members)
+                    </p>
+                </div>
+
+                <p class="text-mutedCharcoal text-sm sm:text-base leading-relaxed">
+                    Making legal metrology verification digital, transparent, and accessible. True Metric replaces paper-based weighing instrument verification with a full-stack web portal and an offline-first mobile system using GPS-evidenced inspections and QR-verifiable statutory certificates.
+                </p>
+
+                <!-- Key Architectural Highlights -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+                    <div class="p-4 rounded-xl bg-white/70 border border-borderWarm space-y-2">
+                        <div class="font-bold text-sm text-charcoal flex items-center gap-2">
+                            <i class="fa-solid fa-code text-warmYellow"></i> What I Built
+                        </div>
+                        <ul class="text-xs text-softGray space-y-1.5 list-disc list-inside">
+                            <td>Built Next.js 15 &amp; TypeScript portal for trader registration &amp; public QR verification.</td>
+                            <td>Designed Supabase database schema &amp; Row-Level Security (RLS) policies.</td>
+                            <td>Built Express API generating statutory Schedule IX PDF certificates with QR codes.</td>
+                        </ul>
+                    </div>
+
+                    <div class="p-4 rounded-xl bg-white/70 border border-borderWarm space-y-2">
+                        <div class="font-bold text-sm text-charcoal flex items-center gap-2">
+                            <i class="fa-solid fa-lightbulb text-warmYellow"></i> A Challenge I Solved
+                        </div>
+                        <p class="text-xs text-softGray leading-relaxed">
+                            <strong class="text-charcoal">When the database said nothing:</strong> A database insert was silently failing due to RLS restricting unauthenticated users. I resolved it by introducing a scoped anonymous insert policy and surfacing error states directly in the UI.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap items-center justify-between gap-4 pt-2">
+                    <div class="flex flex-wrap gap-2 font-mono text-xs">
+                        <span class="px-2.5 py-1 rounded-md bg-white border border-borderWarm text-charcoal">Next.js 15</span>
+                        <span class="px-2.5 py-1 rounded-md bg-white border border-borderWarm text-charcoal">TypeScript</span>
+                        <span class="px-2.5 py-1 rounded-md bg-white border border-borderWarm text-charcoal">Supabase (RLS)</span>
+                        <span class="px-2.5 py-1 rounded-md bg-white border border-borderWarm text-charcoal">Express API</span>
+                        <span class="px-2.5 py-1 rounded-md bg-white border border-borderWarm text-charcoal">Flutter / Dart</span>
+                    </div>
+
+                    <a href="https://github.com/sankhduu/dih_project" target="_blank" rel="noopener noreferrer" class="px-4 py-2 text-xs font-mono font-bold text-charcoal border border-charcoal rounded-lg hover:bg-charcoal hover:text-white transition-all flex items-center gap-2">
+                        <span>Explore Repository</span>
+                        <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Secondary Projects Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+                <!-- Project 02: Campus Utility -->
+                <div class="warm-glass p-6 rounded-2xl border-borderWarm space-y-4 flex flex-col justify-between">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-mono font-bold text-warmYellow">02 — UTILITY</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-100 text-amber-800 border border-amber-300">In Development</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-charcoal">Smart Timetable &amp; Campus Utility</h3>
+                        <p class="text-softGray text-xs sm:text-sm leading-relaxed">
+                            Bringing everyday college essentials into one place. Allows CRs to upload timetables, schedule updates, attendance tracking, and campus procedure guides.
+                        </p>
+                    </div>
+                    <div class="space-y-3 pt-4 border-t border-borderWarm">
+                        <div class="flex flex-wrap gap-1.5 font-mono text-[11px]">
+                            <span class="px-2 py-0.5 rounded bg-white border border-borderWarm text-softGray">Flutter</span>
+                            <span class="px-2 py-0.5 rounded bg-white border border-borderWarm text-softGray">Schedule API</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Project 03: Polliter -->
+                <div class="warm-glass p-6 rounded-2xl border-borderWarm space-y-4 flex flex-col justify-between">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-mono font-bold text-warmYellow">03 — SOCIAL</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-100 text-blue-800 border border-blue-300">Upcoming</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-charcoal">Polliter</h3>
+                        <p class="text-softGray text-xs sm:text-sm leading-relaxed">
+                            A political social networking platform enabling location-based discussions between citizens, community initiatives, and local representatives with AI-assisted issue detection.
+                        </p>
+                    </div>
+                    <div class="space-y-3 pt-4 border-t border-borderWarm">
+                        <div class="flex flex-wrap gap-1.5 font-mono text-[11px]">
+                            <span class="px-2 py-0.5 rounded bg-white border border-borderWarm text-softGray">Next.js</span>
+                            <span class="px-2 py-0.5 rounded bg-white border border-borderWarm text-softGray">AI Analytics</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Project 04: Telegram Bot -->
+                <div class="warm-glass p-6 rounded-2xl border-borderWarm space-y-4 flex flex-col justify-between">
+                    <div class="space-y-3">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-mono font-bold text-warmYellow">04 — AUTOMATION</span>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-gray-200 text-gray-800 border border-gray-300">Personal Project</span>
+                        </div>
+                        <h3 class="text-xl font-bold text-charcoal">Telegram Uptime Bot</h3>
+                        <p class="text-softGray text-xs sm:text-sm leading-relaxed">
+                            Automated status monitoring and uptime alerting delivered directly to Telegram messages for instant notification handling and web service debugging.
+                        </p>
+                    </div>
+                    <div class="space-y-3 pt-4 border-t border-borderWarm">
+                        <div class="flex flex-wrap gap-1.5 font-mono text-[11px]">
+                            <span class="px-2 py-0.5 rounded bg-white border border-borderWarm text-softGray">Python</span>
+                            <span class="px-2 py-0.5 rounded bg-white border border-borderWarm text-softGray">Telegram API</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- Technical Stack -->
+        <section id="skills" class="space-y-8 story-reveal">
+            <div class="border-l-4 border-warmYellow pl-4">
+                <h2 class="text-2xl sm:text-3xl font-bold text-charcoal">What I Work With</h2>
+                <p class="text-xs sm:text-sm font-mono text-softGray mt-1">// Languages, Tools &amp; Focus Areas</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <!-- Languages -->
+                <div class="warm-glass p-6 rounded-2xl border-borderWarm space-y-4">
+                    <h3 class="text-lg font-bold text-charcoal flex items-center gap-2">
+                        <i class="fa-solid fa-code text-warmYellow"></i> Languages
+                    </h3>
+                    <div class="flex flex-wrap gap-2 font-mono text-xs">
+                        <span class="px-3 py-1.5 rounded-lg bg-white border border-borderWarm text-charcoal font-semibold">Dart</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-white border border-borderWarm text-charcoal font-semibold">Kotlin</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-white border border-borderWarm text-charcoal font-semibold">Python</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-white border border-borderWarm text-charcoal font-semibold">Java</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-white border border-borderWarm text-charcoal font-semibold">C</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-white border border-borderWarm text-charcoal font-semibold">TypeScript</span>
+                    </div>
+                </div>
+
+                <!-- Frameworks & Tools -->
+                <div class="warm-glass p-6 rounded-2xl border-borderWarm space-y-4">
+                    <h3 class="text-lg font-bold text-charcoal flex items-center gap-2">
+                        <i class="fa-solid fa-layer-group text-warmYellow"></i> Frameworks &amp; Tools
+                    </h3>
+                    <div class="flex flex-wrap gap-2 font-mono text-xs">
+                        <span class="px-3 py-1.5 rounded-lg bg-white border border-borderWarm text-charcoal font-semibold">Flutter</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-white border border-borderWarm text-charcoal font-semibold">Next.js</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-white border border-borderWarm text-charcoal font-semibold">Express</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-white border border-borderWarm text-charcoal font-semibold">Jetpack Compose</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-white border border-borderWarm text-charcoal font-semibold">Supabase</span>
+                        <span class="px-3 py-1.5 rounded-lg bg-white border border-borderWarm text-charcoal font-semibold">Git &amp; GitHub</span>
+                    </div>
+                </div>
+
+                <!-- Areas of Interest -->
+                <div class="warm-glass p-6 rounded-2xl border-borderWarm space-y-4">
+                    <h3 class="text-lg font-bold text-charcoal flex items-center gap-2">
+                        <i class="fa-solid fa-compass text-warmYellow"></i> Areas of Interest
+                    </h3>
+                    <ul class="text-xs font-mono text-softGray space-y-2">
+                        <li class="flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-warmYellow"></span> Full-stack &amp; Mobile Apps
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-warmYellow"></span> Backend Systems &amp; Automation
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-warmYellow"></span> AI-Assisted Applications
+                        </li>
+                        <li class="flex items-center gap-2">
+                            <span class="w-1.5 h-1.5 rounded-full bg-warmYellow"></span> Electronics &amp; Tech Entrepreneurship
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <!-- Education Section -->
+        <section id="education" class="space-y-6 story-reveal">
+            <div class="border-l-4 border-warmYellow pl-4">
+                <h2 class="text-2xl sm:text-3xl font-bold text-charcoal">Where I'm Studying</h2>
+                <p class="text-xs sm:text-sm font-mono text-softGray mt-1">// Academic Foundation</p>
+            </div>
+
+            <div class="warm-glass p-6 sm:p-8 rounded-2xl border-borderWarm flex flex-col md:flex-row items-start justify-between gap-6">
+                <div class="space-y-2">
+                    <span class="px-3 py-1 rounded-full text-xs font-mono bg-warmYellow/30 text-charcoal font-bold">
+                        B.TECH · ELECTRONICS &amp; COMPUTER ENGINEERING
+                    </span>
+                    <h3 class="text-xl sm:text-2xl font-bold text-charcoal">
+                        Guru Jambheshwar University of Science and Technology, Hisar
+                    </h3>
+                    <p class="text-softGray text-sm">
+                        Currently in 1st Year (2026 – 2030 batch). Building strong fundamentals in programming, electronics, and core engineering principles while active on software projects.
+                    </p>
+                </div>
+                <div class="font-mono text-xs text-softGray whitespace-nowrap bg-white px-4 py-2 rounded-xl border border-borderWarm">
+                    2026 – 2030
+                </div>
+            </div>
+        </section>
+
+        <!-- Contact & Connect -->
+        <section id="contact" class="space-y-8 story-reveal">
+            <div class="border-l-4 border-warmYellow pl-4">
+                <h2 class="text-2xl sm:text-3xl font-bold text-charcoal">Let's Connect</h2>
+                <p class="text-xs sm:text-sm font-mono text-softGray mt-1">// Have an idea or project to discuss?</p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Email -->
+                <a href="mailto:singhaditya140277@gmail.com" class="warm-glass p-6 rounded-2xl border-borderWarm text-center space-y-3 group hover:border-warmYellow">
+                    <div class="w-12 h-12 rounded-full bg-lightYellow border border-warmYellow flex items-center justify-center text-warmYellow text-xl mx-auto group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-envelope"></i>
+                    </div>
+                    <div class="font-bold text-charcoal text-sm">Email Direct</div>
+                    <div class="font-mono text-xs text-softGray break-all">singhaditya140277@gmail.com</div>
+                </a>
+
+                <!-- Phone -->
+                <a href="tel:7027542547" class="warm-glass p-6 rounded-2xl border-borderWarm text-center space-y-3 group hover:border-warmYellow">
+                    <div class="w-12 h-12 rounded-full bg-lightYellow border border-warmYellow flex items-center justify-center text-warmYellow text-xl mx-auto group-hover:scale-110 transition-transform">
+                        <i class="fa-solid fa-phone"></i>
+                    </div>
+                    <div class="font-bold text-charcoal text-sm">Phone Call</div>
+                    <div class="font-mono text-xs text-softGray">+91 70275 42547</div>
+                </a>
+
+                <!-- GitHub -->
+                <a href="https://github.com/sankhduu/dih_project" target="_blank" rel="noopener noreferrer" class="warm-glass p-6 rounded-2xl border-borderWarm text-center space-y-3 group hover:border-warmYellow">
+                    <div class="w-12 h-12 rounded-full bg-lightYellow border border-warmYellow flex items-center justify-center text-warmYellow text-xl mx-auto group-hover:scale-110 transition-transform">
+                        <i class="fa-brands fa-github"></i>
+                    </div>
+                    <div class="font-bold text-charcoal text-sm">GitHub Profile</div>
+                    <div class="font-mono text-xs text-softGray">github.com/sankhduu/dih_project</div>
+                </a>
+
+                <!-- LinkedIn -->
+                <a href="https://www.linkedin.com/in/me-hu-adityasingh" target="_blank" rel="noopener noreferrer" class="warm-glass p-6 rounded-2xl border-borderWarm text-center space-y-3 group hover:border-warmYellow">
+                    <div class="w-12 h-12 rounded-full bg-lightYellow border border-warmYellow flex items-center justify-center text-warmYellow text-xl mx-auto group-hover:scale-110 transition-transform">
+                        <i class="fa-brands fa-linkedin"></i>
+                    </div>
+                    <div class="font-bold text-charcoal text-sm">LinkedIn</div>
+                    <div class="font-mono text-xs text-softGray">me-hu-adityasingh</div>
+                </a>
+
+                <!-- Instagram -->
+                <a href="https://www.instagram.com/me_hu_adityasingh" target="_blank" rel="noopener noreferrer" class="warm-glass p-6 rounded-2xl border-borderWarm text-center space-y-3 group hover:border-warmYellow">
+                    <div class="w-12 h-12 rounded-full bg-lightYellow border border-warmYellow flex items-center justify-center text-warmYellow text-xl mx-auto group-hover:scale-110 transition-transform">
+                        <i class="fa-brands fa-instagram"></i>
+                    </div>
+                    <div class="font-bold text-charcoal text-sm">Instagram</div>
+                    <div class="font-mono text-xs text-softGray">me_hu_adityasingh</div>
+                </a>
+
+                <!-- Location -->
+                <div class="warm-glass p-6 rounded-2xl border-borderWarm text-center space-y-3">
+                    <div class="w-12 h-12 rounded-full bg-lightYellow border border-warmYellow flex items-center justify-center text-warmYellow text-xl mx-auto">
+                        <i class="fa-solid fa-location-dot"></i>
+                    </div>
+                    <div class="font-bold text-charcoal text-sm">Location</div>
+                    <div class="font-mono text-xs text-softGray">Hisar, Haryana, India</div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="border-t border-borderWarm bg-warmBg py-8 relative z-10">
+        <div class="max-w-5xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-mono text-softGray">
+            <div>
+                &copy; <span id="year"></span> Aditya Singh. Building things that solve real problems.
+            </div>
+            <div>
+                <a href="#hero" class="hover:text-warmYellow">Back to top ↑</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Interactive Scripts & Three.js Canvas Engine -->
+    <script>
+        document.getElementById('year').textContent = new Date().getFullYear();
+
+        // 1. Custom Pointer Cursor Logic
+        const cursor = document.getElementById('custom-cursor');
+        const cursorDot = document.getElementById('custom-cursor-dot');
+        let mouseX = 0, mouseY = 0;
+        let cursorX = 0, cursorY = 0;
+
+        document.addEventListener('mousemove', (e) => {
+            mouseX = e.clientX;
+            mouseY = e.clientY;
+            cursorDot.style.left = `${mouseX}px`;
+            cursorDot.style.top = `${mouseY}px`;
+        });
+
+        function animateCursor() {
+            cursorX += (mouseX - cursorX) * 0.15;
+            cursorY += (mouseY - cursorY) * 0.15;
+            cursor.style.left = `${cursorX}px`;
+            cursor.style.top = `${cursorY}px`;
+            requestAnimationFrame(animateCursor);
+        }
+        animateCursor();
+
+        // 2. Story Reveal Intersection Observer
+        const storyObserver = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('active');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.story-reveal').forEach(el => storyObserver.observe(el));
+
+        // 3. Three.js Ambient Particle Mesh Engine (Warm Theme)
+        window.onload = function() {
+            const container = document.getElementById('canvas-container');
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 35;
+
+            const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            container.appendChild(renderer.domElement);
+
+            // Floating Wireframe Geometric Ring
+            const geometry = new THREE.TorusGeometry(12, 3, 16, 50);
+            const material = new THREE.MeshBasicMaterial({
+                color: 0xF5B041,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.18
+            });
+            const torus = new THREE.Mesh(geometry, material);
+            torus.position.set(20, 5, -10);
+            scene.add(torus);
+
+            // Ambient Particle Field
+            const particleCount = 250;
+            const particlesGeometry = new THREE.BufferGeometry();
+            const positions = new Float32Array(particleCount * 3);
+
+            for (let i = 0; i < particleCount * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 120;
+                positions[i + 1] = (Math.random() - 0.5) * 120;
+                positions[i + 2] = (Math.random() - 0.5) * 80;
+            }
+
+            particlesGeometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+
+            const particlesMaterial = new THREE.PointsMaterial({
+                color: 0x1A1A1A,
+                size: 0.6,
+                transparent: true,
+                opacity: 0.25
+            });
+
+            const particleSystem = new THREE.Points(particlesGeometry, particlesMaterial);
+            scene.add(particleSystem);
+
+            // Mouse parallax movement
+            let targetX3D = 0, targetY3D = 0;
+            window.addEventListener('mousemove', (e) => {
+                targetX3D = (e.clientX - window.innerWidth / 2) * 0.015;
+                targetY3D = (e.clientY - window.innerHeight / 2) * 0.015;
+            });
+
+            window.addEventListener('resize', () => {
+                camera.aspect = window.innerWidth / window.innerHeight;
+                camera.updateProjectionMatrix();
+                renderer.setSize(window.innerWidth, window.innerHeight);
+            });
+
+            function animate() {
+                requestAnimationFrame(animate);
+
+                torus.rotation.x += 0.002;
+                torus.rotation.y += 0.004;
+
+                torus.position.x += (targetX3D * 0.5 - torus.position.x + 20) * 0.05;
+                torus.position.y += (-targetY3D * 0.5 - torus.position.y + 5) * 0.05;
+
+                particleSystem.rotation.y += 0.0005;
+
+                renderer.render(scene, camera);
+            }
+            animate();
+        };
+    </script>
+</body>
+</html>
+```
